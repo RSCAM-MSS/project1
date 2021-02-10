@@ -1,0 +1,105 @@
+---
+title: "Modeling outcomes of soccer matches"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r include=FALSE}
+library(dplyr)
+```
+
+
+### Read Data
+
+```{r}
+data <- read.table("data/ISDBv2.0.txt",sep="\t",header=TRUE)
+
+data
+```
+
+
+### Data cleanning and feature extraction
+
+```{r prep}
+# Add your code here
+
+
+```
+
+
+
+### Modelling outcomes
+
+#### Bradey-Terry models and extensions
+
+The Bradley-Terry model assumes that
+
+$$
+p(y_{ijt}=1) = \frac{\pi_{i}}{\pi_{i}+\pi_{j}},
+$$
+where $\pi_{i}=\text{exp}(\lambda_{i})$, and $\lambda_{i}$ is understood as the “strength” of team $i$.
+
+We consider extensions of the original Bradley- Terry formulation where we allow $\lambda_{i}$ to depend on a $p$-vector of time-dependent features ${\bf x}_{it}$ for team $i$ at time $t$ as $\lambda_{it} = f({x}_{it})$ for some function $f(\cdot)$.
+
+##### Handling draws
+
+1. Ordinal
+
+$$
+y_{i j t}=\left\{\begin{array}{l}
+2, \quad\text{if team }i\text{ beats team }j\text{ at time }t, \\
+1, \quad\text{if team }i\text{ and team }j\text{ draw at time }t,\\
+0, \quad\text{if team }j\text{ beats team }i\text{ at time }t.
+\end{array}\right.
+$$
+and assume that $y_{ijt}$ has
+
+$$
+p\left(y_{i j t} \leq y\right)=\frac{e^{\delta_{y}+\lambda_{i t}}}{e^{\delta_{y}+\lambda_{i t}}+e^{\lambda_{j t}}}.
+$$
+
+
+2. Davison
+
+$$
+\begin{aligned}
+p\left(y_{i j t}=2 \mid y_{i j t} \neq 1\right) &=\frac{\pi_{i t}}{\pi_{i t}+\pi_{j t}}, \\
+p\left(y_{i j t}=1\right) &=\frac{\delta \sqrt{\pi_{i t} \pi_{j t}}}{\pi_{i t}+\pi_{j t}+\delta \sqrt{\pi_{i t} \pi_{j t}}}, \\
+p\left(y_{i j t}=0 \mid y_{i j t} \neq 1\right) &=\frac{\pi_{j t}}{\pi_{i t}+\pi_{j t}}.
+\end{aligned}
+$$
+
+##### BL: Base Line
+
+$$
+\lambda_{it} = \beta h_{it},
+$$
+where $h_{it}=1$ if team $i$ is playing at home at time $t$, and $h_{it} = 0$ otherwise.
+
+
+##### CS: Constant Strengths
+
+$$
+\lambda_{it} = \alpha_{i} + \beta h_{it},
+$$
+where $\alpha_{i}$ represents the time-invariant strength of the $i$th team.
+
+
+##### LF: Linear with features
+
+$$
+\lambda_{it} = \sum_{k=1}^{p}\beta_{k}{\bf x}_{itk},
+$$
+where $x_{itk}$ is the $k$th element of the feature vector ${\bf x}_{it}$.
+
+
+##### Estimation
+
+```{r}
+myadf <- function(ht, at, t, outcome) {
+  
+}
+```
+
+
