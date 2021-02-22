@@ -6,23 +6,73 @@ output:
 ---
 
 ```{r include=FALSE}
-library(dplyr)
+library(tidyverse)
 ```
 
 
 ### Read Data
+
 
 ```{r}
 data <- read.table("data/ISDBv2.0.txt",sep="\t",header=TRUE)
 
 data
 ```
+### Data exploration
+
+```{r}
+data %>% separate(Lge, c("LgeName"), 3, remove = FALSE) %>%
+  ggplot(aes(LgeName, weight=1/1000)) + geom_bar(color="black",fill="gray",width=.75) + 
+  labs(
+    x = "Country",
+    y = "Number of matches (thousands)",
+    title = "Fig 1: Number of available matches per country in the data"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.x=element_text(angle=90, hjust=1)
+  )
+```
+
+
+```{r}
+hg <- data %>% select(-c("GD","WDL")) %>% 
+  pivot_longer(
+    c("HS","AS"),
+    names_to = "Home",
+    values_to = "Goal"
+  ) %>% 
+  mutate(
+    Home = ordered(Home, levels=c("HS","AS"))
+  ) 
+
+hg %>% 
+  ggplot(aes(Goal,weight=1/1000,fill=Home)) + geom_bar(position = "dodge",width = .5,color="black") + 
+  labs(
+    x = "Number of goals",
+    y = "Number of matches (thousands)",
+    title = "Fig 2: The number of matches per number of goals scored by the home and away team"
+  ) +
+  scale_fill_manual(values = c("black","gray")) +
+  scale_x_continuous(breaks = 0:11) +
+  theme_classic()
+  
+```
+
+```{r}
+data %>% distinct() %>% summarise(
+  sumHS = sum(HS),
+  sumAS = sum(AS)
+)
+
+# The result is different from the paper.
+```
 
 
 ### Data cleanning and feature extraction
 
 ```{r prep}
-# Add your code here
+# Errors mentioned in the paper has been corrected in the ISDB v2.0.
 
 
 ```
@@ -31,7 +81,7 @@ data
 
 ### Modelling outcomes
 
-#### Bradey-Terry models and extensions
+#### Bradley-Terry models and extensions
 
 The Bradley-Terry model assumes that
 
@@ -97,9 +147,78 @@ where $x_{itk}$ is the $k$th element of the feature vector ${\bf x}_{it}$.
 ##### Estimation
 
 ```{r}
-myadf <- function(ht, at, t, outcome) {
-  
+# Implement the model on a small data set: 16-17 GER1
+# Extract the `Home` feature
+trdata <- data %>% filter(Sea=="16-17" & Lge=="GER1") %>%  select(-c("Sea","Lge","HS","AS","GD")) %>% 
+  summarise(
+    Date = as.numeric(as.Date(Date,"%d/%m/%y")),
+    HT = ordered(HT,levels = unique(.data$HT)),
+    AT = ordered(AT,levels = unique(.data$HT)),
+    H = as.integer(HT),
+    A = as.integer(AT),
+    WDL = 2*(WDL == "W") + (WDL == "D")
+  )
+
+trdata
+```
+
+```{r}
+hit <- function(i,t,data) {
+  ma <- data %>% filter(Date == t & H == i)
+  return(nrow(ma))
+}
+
+hit(7,18501,trdata)
+
+lit <- function(beta,i,t,data) {
+  return(beta*hit(i,t,data))
+}
+lit(1,1,18500,trdata)
+
+Ord_cdf <- function(y,delta,beta,i,j,t,data) {
+  l_it <- lit(beta,i,t,data)
+  l_jt <- lit(beta,j,t,data)
+  num = exp(delta[y+1]+l_it)
+  denom = num + exp(l_jt)
+  return(num/denom)
+}
+
+Ord_pdf <- function(y,delta,beta,i,j,t,data) {
+  if(y == 0)
+    return(Ord_cdf(y,delta,beta,i,j,t,data)) 
+  else if(y == 1) {
+    p0 = Ord_cdf(0,delta,beta,i,j,t,data)
+    p1 = Ord_cdf(y,delta,beta,i,j,t,data)
+    return(p1-p0)
+  }
+  else if (y == 2) {
+    p1 = Ord_cdf(1,delta,beta,i,j,t,data)
+    p2 = Ord_cdf(y,delta,beta,i,j,t,data)
+    return(p2-p1)
+  }
 }
 ```
 
+```{r}
+# The log-likelihood
+ll <- function(data,theta) {
+  beta = theta[1]
+  delta = theta[-1]
+  
+  N = nrow(data)
+  ll <- 0
+  
+  for (k in 1:N) {
+    ma = data[k,]
+    i = ma$H
+    j = ma$A
+    t = ma$Date
+    y = ma$WDL
+    
+    ll = ll + log10(Ord_pdf(y,delta,beta,i,j,t,data))
+  }
+  
+  return(ll)
+}
+```
 

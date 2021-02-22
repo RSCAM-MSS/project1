@@ -1,0 +1,72 @@
+---
+title: "test"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("readxl")
+library('tidyverse')
+library(dplyr)
+```
+
+## import data
+
+```{r import data}
+training_data <- read.delim("ISDBv2.0.txt")
+test_data <- read_excel('Prediction_set_real_outcomes.xlsx')
+```
+
+## Tidy data
+
+```{r tidy data, echo=TRUE}
+training_df = tibble::tibble(training_data)
+tidy_data = training_df%>%
+  drop_na()
+```
+
+## Base line model
+
+```{r baseline}
+beta = 0.6
+
+data_home = tidy_data%>%
+  select('HT', 'WDL')%>%
+  count(HT,WDL)%>%
+  filter(WDL == "W" )%>%
+  select(HT, n)
+
+total_matches <- tidy_data%>%
+  select('HT', 'WDL')%>%
+  count(HT)
+
+baseline <- function(pi_i){
+  result <- pi_i / (pi_i + 1)
+  return(result)
+}
+
+data_home = data_home%>%
+  mutate(total_matches$n)
+
+names(data_home)[2] <- 'NW'
+names(data_home)[3] <- 'N'
+data_home <- data_home%>%
+  mutate(P = baseline(exp(NW / N)))%>%
+  mutate(P = as.numeric(P))
+
+Prediction = rbinom(length(data_home$P), size=1, prob = data_home$P)
+
+data_home <- data_home%>%
+  mutate(Predict = Prediction)%>%
+  mutate(Prediction = case_when((Predict==1) ~'W', (Predict==0) ~'L'))%>%
+  select(HT, Prediction)
+
+test_data <- test_data%>%
+  left_join(data_home, by='HT')
+```
+
+```{r cs}
+correct_prediction = length(which(test_data$WDL == test_data$Prediction))
+accuracy = correct_prediction / length(test_data$WDL)
+accuracy
+```
