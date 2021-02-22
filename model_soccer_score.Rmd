@@ -110,7 +110,7 @@ p\left(y_{i j t} \leq y\right)=\frac{e^{\delta_{y}+\lambda_{i t}}}{e^{\delta_{y}
 $$
 
 
-2. Davison
+2. Davidson
 
 $$
 \begin{aligned}
@@ -176,6 +176,7 @@ lit <- function(beta,i,t,data) {
 lit(1,1,18500,trdata)
 
 Ord_cdf <- function(y,delta,beta,i,j,t,data) {
+  if(y==2) return(1)
   l_it <- lit(beta,i,t,data)
   l_jt <- lit(beta,j,t,data)
   num = exp(delta[y+1]+l_it)
