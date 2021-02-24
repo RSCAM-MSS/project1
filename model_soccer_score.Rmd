@@ -176,7 +176,8 @@ lit <- function(beta,i,t,data) {
 lit(1,1,18500,trdata)
 
 Ord_cdf <- function(y,delta,beta,i,j,t,data) {
-  if(y==2) return(1)
+  if(y==2) 
+    return(1)
   l_it <- lit(beta,i,t,data)
   l_jt <- lit(beta,j,t,data)
   num = exp(delta[y+1]+l_it)
@@ -185,24 +186,33 @@ Ord_cdf <- function(y,delta,beta,i,j,t,data) {
 }
 
 Ord_pdf <- function(y,delta,beta,i,j,t,data) {
-  if(y == 0)
-    return(Ord_cdf(y,delta,beta,i,j,t,data)) 
-  else if(y == 1) {
-    p0 = Ord_cdf(0,delta,beta,i,j,t,data)
-    p1 = Ord_cdf(y,delta,beta,i,j,t,data)
-    return(p1-p0)
-  }
-  else if (y == 2) {
-    p1 = Ord_cdf(1,delta,beta,i,j,t,data)
-    p2 = Ord_cdf(y,delta,beta,i,j,t,data)
-    return(p2-p1)
-  }
+  case_when(
+    y == 2 ~ 1 - Ord_cdf(1,delta,beta,i,j,t,data),
+    y == 1 ~ Ord_cdf(1,delta,beta,i,j,t,data) - Ord_cdf(0,delta,beta,i,j,t,data),
+    y == 0 ~ Ord_cdf(0,delta,beta,i,j,t,data)
+  )
 }
+
+Dav_pdf <- function(y,delta,beta,i,j,t,data) {
+  piit <- exp(lit(beta,i,t,data))
+  pijt <- exp(lit(beta,i,t,data))
+  
+  num = delta*sqrt(piit*pijt)
+  denom = piit + pijt + num
+  p1 = num/denom
+  
+  case_when(
+    y == 1 ~ p1,
+    y == 0 ~ (1-p1)*pijt/(piit+pijt),
+    y == 2 ~ (1-p1)*piit/(piit+pijt)
+  )
+}
+
 ```
 
 ```{r}
 # The log-likelihood
-ll <- function(data,theta) {
+ll_BL <- function(theta,data,method_pdf) {
   beta = theta[1]
   delta = theta[-1]
   
@@ -216,10 +226,16 @@ ll <- function(data,theta) {
     t = ma$Date
     y = ma$WDL
     
-    ll = ll + log10(Ord_pdf(y,delta,beta,i,j,t,data))
+    ll = ll + log10(method_pdf(y,delta,beta,i,j,t,data))
   }
   
   return(ll)
 }
+```
+
+```{r}
+# Find the optimal solution
+init <- c(1,0.5)
+optim(par=init,fn=ll_BL,data=trdata,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
 ```
 
