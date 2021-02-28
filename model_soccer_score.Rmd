@@ -7,6 +7,8 @@ output:
 
 ```{r include=FALSE}
 library(tidyverse)
+install.packages("fastDummies")
+library("fastDummies")
 ```
 
 
@@ -163,18 +165,24 @@ trdata
 ```
 
 ```{r}
+# Vector hit
 hit <- function(i,t,data) {
   ma <- data %>% filter(Date == t & H == i)
   return(nrow(ma))
 }
 
+#Test - should be 1, as its bayern munich 
+
 hit(7,18501,trdata)
 
+#Function lambda lit
 lit <- function(beta,i,t,data) {
   return(beta*hit(i,t,data))
 }
+#Test - shoudl be 1
 lit(1,1,18500,trdata)
 
+# Cumulative distribution of yit
 Ord_cdf <- function(y,delta,beta,i,j,t,data) {
   l_it <- lit(beta,i,t,data)
   l_jt <- lit(beta,j,t,data)
@@ -182,6 +190,8 @@ Ord_cdf <- function(y,delta,beta,i,j,t,data) {
   denom = num + exp(l_jt)
   return(num/denom)
 }
+# Compute the pdf for each case of value of y
+# Not sure I understand why you did this @! 
 
 Ord_pdf <- function(y,delta,beta,i,j,t,data) {
   case_when(
@@ -191,7 +201,7 @@ Ord_pdf <- function(y,delta,beta,i,j,t,data) {
   )
 }
 
-Ord_pdf(1, c(0,1),1,1,17,18500,trdata)
+
 
 Dav_pdf <- function(y,delta,beta,i,j,t,data) {
   piit <- exp(lit(beta,i,t,data))
@@ -247,6 +257,80 @@ optim(par=init,fn=ll_BL,data=trdata,method_pdf=Ord_pdf,method="BFGS",control=lis
 ```
 
 
+##### Ranked probability score 
+
+Both functions above return the value 
+
+```{r}
+# Build a table similar to what's in the paper
+# a1 = team i loose WDL_0 
+# a2 = team i draw WDL_1
+# a3 = team i win WDL_2
+RPS.data<-fastDummies::dummy_cols(trdata,select_columns = "WDL",remove_first_dummy = FALSE)
+
+# Create the baseline p1, p2, p3
+# Get the vector of interest
+i = as.numeric(trdata$H)
+j = as.numeric(trdata$A)
+t = trdata$Date
+
+# 1 - For baseline function, using the value from optimise function
+beta = 0.6039006
+delta = 0.6671990
+
+#Get the probability to obtain y=0
+y = RPS.data$WDL_0
+RPS.data$p0 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+#Get the probability to obtain y=1
+y = RPS.data$WDL_1
+RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+#Get the probability to obtain y=2
+y = RPS.data$WDL_2
+RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+# Get the RPS 
+RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
+
+# 2 - For Davidson function, using the value from optimise function
+# TO DO 
+beta = -0.6552317 -0.3496924  0.6944607
+delta = 0.6671990
+
+#Get the probability to obtain y=0
+y = RPS.data$WDL_0
+RPS.data$p0 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+#Get the probability to obtain y=1
+y = RPS.data$WDL_1
+RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+#Get the probability to obtain y=2
+y = RPS.data$WDL_2
+RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+# Get the RPS 
+RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
+
+
+
+#lapply(trdata$WDL, Ord_pdf(y,c(delta,1-delta),beta,i,j,t,ma))
+# # Baseline methods 
+# lapply((),Ord_pdf(y,c(delta,1-delta),beta,i,j,t,ma))
+# 
+
+# y
+# # 
+# # #Use the result from the optimisation function
+# # # 0.6039006 0.6671990
+# beta = 0.6039006
+# delta = 0.6671990
+# 
+# Ord_pdf(y,c(delta,1-delta),beta,i,j,t,ma)
+# 
+
+```
 
 
 
