@@ -154,7 +154,7 @@ where $x_{itk}$ is the $k$th element of the feature vector ${\bf x}_{it}$.
 trdata <- data %>% filter(Sea=="16-17" & Lge=="GER1") %>%  select(-c("Sea","Lge","HS","AS","GD")) %>% 
   summarise(
     Date = as.numeric(as.Date(Date,"%d/%m/%y")),
-    HT = ordered(HT,levels = unique(.data$HT)),
+    HT =ordered(HT,levels = unique(.data$HT)),
     AT = ordered(AT,levels = unique(.data$HT)),
     H = as.integer(HT),
     A = as.integer(AT),
@@ -195,6 +195,7 @@ Ord_cdf <- function(y,delta,beta,i,j,t,data) {
 
 Ord_pdf <- function(y,delta,beta,i,j,t,data) {
   case_when(
+    # I think these are the probab
     y == 2 ~ 1 - Ord_cdf(1,delta,beta,i,j,t,data),
     y == 1 ~ Ord_cdf(1,delta,beta,i,j,t,data) - Ord_cdf(0,delta,beta,i,j,t,data),
     y == 0 ~ Ord_cdf(0,delta,beta,i,j,t,data)
@@ -275,45 +276,54 @@ j = as.numeric(trdata$A)
 t = trdata$Date
 
 # 1 - For baseline function, using the value from optimise function
-beta = 0.6039006
-delta = 0.6671990
+
+par1 = -0.6552317 
+par2=-0.3496924  
+par3 = 0.6944607
+
 
 #Get the probability to obtain y=0
 y = RPS.data$WDL_0
-RPS.data$p0 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p0 = mapply(function(y,i,j,t) Ord_pdf(y,c(par1,par2),par3,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 #Get the probability to obtain y=1
 y = RPS.data$WDL_1
-RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta0,delta1),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 #Get the probability to obtain y=2
 y = RPS.data$WDL_2
-RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta0,delta1),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 # Get the RPS 
 RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
+
+#RPS.ord.data= as.data.frame(RPS.data$HT,RPS.data$WDL_0,RPS.data$WDL_1,RPS.data$WDL_2,RPS.data$p0,RPS.data$p1,RPS.data$p2)
+RPS.ord.data = RPS.data
+
+View(RPS.ord.data)
 
 # 2 - For Davidson function, using the value from optimise function
 # TO DO 
-beta = -0.6552317 -0.3496924  0.6944607
-delta = 0.6671990
+par1 =  0.6039006 
+par2 = 0.6671990
 
 #Get the probability to obtain y=0
 y = RPS.data$WDL_0
-RPS.data$p0 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p0 = mapply(function(y,i,j,t) Dav_pdf(y,par1,par2,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 #Get the probability to obtain y=1
 y = RPS.data$WDL_1
-RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p1 = mapply(function(y,i,j,t) Dav_pdf(y,par1,par2,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 #Get the probability to obtain y=2
 y = RPS.data$WDL_2
-RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta,1-delta),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p2 = mapply(function(y,i,j,t) Dav_pdf(y,par1,par2,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 # Get the RPS 
 RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
 
-
+RPS.data.davidson = RPS.data
+View(RPS.data.davidson)
 
 #lapply(trdata$WDL, Ord_pdf(y,c(delta,1-delta),beta,i,j,t,ma))
 # # Baseline methods 
