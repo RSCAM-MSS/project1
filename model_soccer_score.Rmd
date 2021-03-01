@@ -288,11 +288,11 @@ RPS.data$p0 = mapply(function(y,i,j,t) Ord_pdf(y,c(par1,par2),par3,i,j,t,RPS.dat
 
 #Get the probability to obtain y=1
 y = RPS.data$WDL_1
-RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta0,delta1),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(par1,par2),par3,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 #Get the probability to obtain y=2
 y = RPS.data$WDL_2
-RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(delta0,delta1),beta,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(par1,par2),par3,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
 
 # Get the RPS 
 RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
