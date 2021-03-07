@@ -165,27 +165,10 @@ trdata
 ```
 
 ```{r}
-# Vector hit
-hit <- function(i,t,data) {
-  ma <- data %>% filter(Date == t & H == i)
-  return(nrow(ma))
-}
-
-#Test - should be 1, as its bayern munich 
-
-hit(7,18501,trdata)
-
-#Function lambda lit
-lit <- function(beta,i,t,data) {
-  return(beta*hit(i,t,data))
-}
-#Test - shoudl be 1
-lit(1,1,18500,trdata)
-
 # Cumulative distribution of yit
-Ord_cdf <- function(y,delta,beta,i,j,t,data) {
-  l_it <- lit(beta,i,t,data)
-  l_jt <- lit(beta,j,t,data)
+Ord_cdf <- function(y,delta,beta,i,j,t) {
+  l_it <- beta
+  l_jt <- 0
   num = exp(delta[y+1]+l_it)
   denom = num + exp(l_jt)
   return(num/denom)
@@ -193,20 +176,20 @@ Ord_cdf <- function(y,delta,beta,i,j,t,data) {
 # Compute the pdf for each case of value of y
 # Not sure I understand why you did this @! 
 
-Ord_pdf <- function(y,delta,beta,i,j,t,data) {
+Ord_pdf <- function(y,delta,beta,i,j,t) {
   case_when(
     # I think these are the probab
-    y == 2 ~ 1 - Ord_cdf(1,delta,beta,i,j,t,data),
-    y == 1 ~ Ord_cdf(1,delta,beta,i,j,t,data) - Ord_cdf(0,delta,beta,i,j,t,data),
-    y == 0 ~ Ord_cdf(0,delta,beta,i,j,t,data)
+    y == 2 ~ 1 - Ord_cdf(1,delta,beta,i,j,t),
+    y == 1 ~ Ord_cdf(1,delta,beta,i,j,t) - Ord_cdf(0,delta,beta,i,j,t),
+    y == 0 ~ Ord_cdf(0,delta,beta,i,j,t)
   )
 }
 
 
 
-Dav_pdf <- function(y,delta,beta,i,j,t,data) {
-  piit <- exp(lit(beta,i,t,data))
-  pijt <- exp(lit(beta,j,t,data))
+Dav_pdf <- function(y,delta,beta,i,j,t) {
+  piit <- exp(beta)
+  pijt <- exp(0)
   
   num = delta*sqrt(piit*pijt)
   denom = piit + pijt + num
@@ -227,24 +210,20 @@ ll_BL <- function(theta,data,method_pdf) {
   beta = theta[1]
   delta = theta[-1]
   
-  N = nrow(data)
-  ll <- 0
+  i = data$H
+  j = data$A
+  t = data$Date
+  y = data$WDL
   
-  for (k in 1:N) {
-    ma = data[k,]
-    i = ma$H
-    j = ma$A
-    t = ma$Date
-    y = ma$WDL
-    
-    ll = ll + log10(method_pdf(y,delta,beta,i,j,t,data))
-  }
+  p_pred = mapply(function(y,i,j,t) method_pdf(y,delta,beta,i,j,t),y=y,i=i,j=j,t=t)
+  ll = sum(log10(p_pred))
+
   
   return(ll)
 }
 
 ll_BL(c(1,0.5),trdata,Dav_pdf)
-
+ 
 ll_BL(c(1,0,.5),trdata,Ord_pdf)
 ```
 
