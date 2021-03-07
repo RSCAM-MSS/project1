@@ -151,17 +151,16 @@ where $x_{itk}$ is the $k$th element of the feature vector ${\bf x}_{it}$.
 ```{r}
 # Implement the model on a small data set: 16-17 GER1
 # Extract the `Home` feature
-trdata <- data %>% filter(Sea=="16-17" & Lge=="GER1") %>%  select(-c("Sea","Lge","HS","AS","GD")) %>% 
+trdata <- data %>% filter((Sea=="15-16" | Sea=="16-17") & Lge=="GER1") %>%
   summarise(
     Date = as.numeric(as.Date(Date,"%d/%m/%y")),
+    Sea = Sea,
     HT =ordered(HT,levels = unique(.data$HT)),
     AT = ordered(AT,levels = unique(.data$HT)),
     H = as.integer(HT),
     A = as.integer(AT),
     WDL = 2*(WDL == "W") + (WDL == "D")
-  )
-
-trdata
+)
 ```
 
 ```{r}
@@ -221,19 +220,19 @@ ll_BL <- function(theta,data,method_pdf) {
   
   return(ll)
 }
-
-ll_BL(c(1,0.5),trdata,Dav_pdf)
- 
-ll_BL(c(1,0,.5),trdata,Ord_pdf)
+# 
+# ll_BL(c(1,0.5),trdata,Dav_pdf)
+#  
+# ll_BL(c(1,0,.5),trdata,Ord_pdf)
 ```
 
 ```{r}
 # Find the optimal solution
-init <- c(.5,.5)
-optim(par=init,fn=ll_BL,data=trdata,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
-
-init <- c(-.5,0,.5)
-optim(par=init,fn=ll_BL,data=trdata,method_pdf=Ord_pdf,method="BFGS",control=list(fnscale=-1))
+# init <- c(.5,.5)
+# optim(par=init,fn=ll_BL,data=trdata,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
+# 
+# init <- c(-.5,0,.5)
+# optim(par=init,fn=ll_BL,data=trdata,method_pdf=Ord_pdf,method="BFGS",control=list(fnscale=-1))
 ```
 
 
@@ -242,32 +241,30 @@ optim(par=init,fn=ll_BL,data=trdata,method_pdf=Ord_pdf,method="BFGS",control=lis
 Both functions above return the value 
 
 ```{r}
-N = 20
+# 1 - For Davidson function, using parameters estimated from previous games
+
+N = nrow(trdata)
 init = c(.5,.5)
-ptrdata = trdata
+ptrdata = trdata[307:N]
 ptrdata$par1 = NaN
 ptrdata$par2 = NaN
 
-for(i in 10:N) {
+for(i in 1:N) {
   # get the subset 
-  tr_subset = trdata[1:i-1,]
+  tr_subset = trdata[1:306+i-1,]
   
   #get the suited parameters 
   re = optim(par=init,fn=ll_BL,data=tr_subset,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
   init = re$par
   
-  ptrdata[i,7] = init[1]
-  ptrdata[i,8] = init[2]
-
-  
+  ptrdata[i,"par1"] = init[1]
+  ptrdata[i,"par2"] = init[2]
 }
 
 # Will get the proba of loosing (0), winning (2), having a draw(1)
-ptrdata <- ptrdata[6:50,]
 ptrdata$p0 = NaN
 ptrdata$p1 = NaN
 ptrdata$p2 = NaN
-
 
 ptrdata$p0 = mapply(function(par1,par2,i,j,t) Dav_pdf(0,par2,par1,i,j,t),par1 = ptrdata$par1, par2 = ptrdata$par2, i=ptrdata$H,j=ptrdata$A,t=ptrdata$Date)
 
@@ -283,60 +280,71 @@ ptrdata<-fastDummies::dummy_cols(ptrdata,select_columns = "WDL",remove_first_dum
 
 
 # Get the RPS 
-ptrdata$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = ptrdata$p0,p1 = ptrdata$p1, a0 =ptrdata$WDL_0,a1 = ptrdata$WDL_1)
+ptrdata$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2)/2,p0 = ptrdata$p0,p1 = ptrdata$p1, a0 =ptrdata$WDL_0,a1 = ptrdata$WDL_1)
 
+# Get the predicted outcome and accuracy
 ptrdata$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = ptrdata$p0,p1 = ptrdata$p1,p2 = ptrdata$p2)
 
 ptrdata$Accuracy = as.numeric(ptrdata$Outcome == ptrdata$WDL)
 
+# Save the results
+ptrdata.dav = ptrdata
 
-# 1 - For baseline function, using the value from optimise function
+View(ptrdata.dav)
 
-par1 = -0.6552317 
-par2=-0.3496924  
-par3 = 0.6944607
+# 2 - For Ordinal function, using parameters estimated from previous games
+# TO DO
 
+N = 6
+init = c(-.5,0,.5)
+ptrdata = trdata
+ptrdata$par1 = NaN
+ptrdata$par2 = NaN
+ptrdata$par3 = NaN
 
-#Get the probability to obtain y=0
+for(i in 5:N) {
+  # get the subset 
+  tr_subset = trdata[1:i-1,]
+  
+  #get the suited parameters 
+  re = optim(par=init,fn=ll_BL,data=tr_subset,method_pdf=Ord_pdf,method="BFGS",control=list(fnscale=-1))
+  init = re$par
+  
+  ptrdata[i,"par1"] = init[1]
+  ptrdata[i,"par2"] = init[2]
+  ptrdata[i,"par3"] = init[3]
+}
 
-RPS.data$p0 = mapply(function(i,j,t) Ord_pdf(0,c(par2,par3),par1,i,j,t),i=i,j=j,t=t)
+# Will get the proba of loosing (0), winning (2), having a draw(1)
+ptrdata$p0 = NaN
+ptrdata$p1 = NaN
+ptrdata$p2 = NaN
 
-#Get the probability to obtain y=1
+ptrdata$p0 = mapply(function(par1,par2,par3,i,j,t) Ord_pdf(0,c(par2,par3),par1,i,j,t),par1 = ptrdata$par1, par2 = ptrdata$par2, par3 = ptrdata$par3, i=ptrdata$H,j=ptrdata$A,t=ptrdata$Date)
 
-RPS.data$p1 = mapply(function(i,j,t) Ord_pdf(1,c(par2,par3),par1,i,j,t),i=i,j=j,t=t)
+ptrdata$p1 = mapply(function(par1,par2,par3,i,j,t) Ord_pdf(1,c(par2,par3),par1,i,j,t),par1 = ptrdata$par1, par2 = ptrdata$par2, par3 = ptrdata$par3, i=ptrdata$H,j=ptrdata$A,t=ptrdata$Date)
 
-#Get the probability to obtain y=2
+ptrdata$p2 = mapply(function(par1,par2,par3,i,j,t) Ord_pdf(2,c(par2,par3),par1,i,j,t),par1 = ptrdata$par1, par2 = ptrdata$par2, par3 = ptrdata$par3, i=ptrdata$H,j=ptrdata$A,t=ptrdata$Date)
 
-RPS.data$p2 = mapply(function(i,j,t) Ord_pdf(2,c(par2,par3),par1,i,j,t),i=i,j=j,t=t)
+# Build a table similar to what's in the paper
+# a1 = team i loose WDL_0 
+# a2 = team i draw WDL_1
+# a3 = team i win WDL_2
+ptrdata<-fastDummies::dummy_cols(ptrdata,select_columns = "WDL",remove_first_dummy = FALSE)
+
 
 # Get the RPS 
-RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
+ptrdata$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2)/2,p0 = ptrdata$p0,p1 = ptrdata$p1, a0 =ptrdata$WDL_0,a1 = ptrdata$WDL_1)
 
-#RPS.ord.data= as.data.frame(RPS.data$HT,RPS.data$WDL_0,RPS.data$WDL_1,RPS.data$WDL_2,RPS.data$p0,RPS.data$p1,RPS.data$p2)
+# Get the predicted outcome and accuracy
+ptrdata$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = ptrdata$p0,p1 = ptrdata$p1,p2 = ptrdata$p2)
 
-RPS.data$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = RPS.data$p0,p1 = RPS.data$p1,p2 = RPS.data$p2)
+ptrdata$Accuracy = as.numeric(ptrdata$Outcome == ptrdata$WDL)
 
-RPS.data$Accuracy = as.numeric(RPS.data$Outcome == RPS.data$WDL)
+# Save the results
+ptrdata.ord = ptrdata
 
-RPS.ord.data = RPS.data
-
-View(RPS.ord.data)
-
-# 2 - For Davidson function, using the value from optimise function
-# TO DO 
-par1 =  0.6039006 
-par2 = 0.6671990
-
-
-# Get the RPS 
-RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
-
-RPS.data$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = RPS.data$p0,p1 = RPS.data$p1,p2 = RPS.data$p2)
-
-RPS.data$Accuracy = as.numeric(RPS.data$Outcome == RPS.data$WDL)
-
-RPS.data.davidson = RPS.data
-View(RPS.data.davidson)
+View(ptrdata.ord)
 
 #lapply(trdata$WDL, Ord_pdf(y,c(delta,1-delta),beta,i,j,t,ma))
 # # Baseline methods 
