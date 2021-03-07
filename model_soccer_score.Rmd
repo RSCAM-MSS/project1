@@ -242,32 +242,49 @@ optim(par=init,fn=ll_BL,data=trdata,method_pdf=Ord_pdf,method="BFGS",control=lis
 Both functions above return the value 
 
 ```{r}
-N = 2
+N = 20
 init = c(.5,.5)
 ptrdata = trdata
 ptrdata$par1 = NaN
 ptrdata$par2 = NaN
 
-for(i in 6:N) {
+for(i in 10:N) {
+  # get the subset 
   tr_subset = trdata[1:i-1,]
+  
+  #get the suited parameters 
   re = optim(par=init,fn=ll_BL,data=tr_subset,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
   init = re$par
+  
   ptrdata[i,7] = init[1]
   ptrdata[i,8] = init[2]
-}
 
   
+}
+
+# Will get the proba of loosing (0), winning (2), having a draw(1)
+ptrdata <- ptrdata[6:50,]
+ptrdata$p0 = NaN
+ptrdata$p1 = NaN
+ptrdata$p2 = NaN
+
+
+ptrdata$p0 = mapply(function(par1,par2,i,j,t) Dav_pdf(0,par2,par1,i,j,t),par1 = ptrdata$par1, par2 = ptrdata$par2, i=ptrdata$H,j=ptrdata$A,t=ptrdata$Date)
+
+ptrdata$p1 = mapply(function(par1,par2,i,j,t) Dav_pdf(1,par2,par1,i,j,t),par1 = ptrdata$par1, par2 = ptrdata$par2, i=ptrdata$H,j=ptrdata$A,t=ptrdata$Date)
+
+ptrdata$p2 = mapply(function(par1,par2,i,j,t) Dav_pdf(2,par2,par1,i,j,t),par1 = ptrdata$par1, par2 = ptrdata$par2, i=ptrdata$H,j=ptrdata$A,t=ptrdata$Date)
+
 # Build a table similar to what's in the paper
 # a1 = team i loose WDL_0 
 # a2 = team i draw WDL_1
 # a3 = team i win WDL_2
-RPS.data<-fastDummies::dummy_cols(trdata,select_columns = "WDL",remove_first_dummy = FALSE)
+ptrdata<-fastDummies::dummy_cols(ptrdata,select_columns = "WDL",remove_first_dummy = FALSE)
 
-# Create the baseline p1, p2, p3
-# Get the vector of interest
-i = as.numeric(trdata$H)
-j = as.numeric(trdata$A)
-t = trdata$Date
+
+# Get the RPS 
+ptrdata$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = ptrdata$p0,p1 = ptrdata$p1, a0 =ptrdata$WDL_0,a1 = ptrdata$WDL_1)
+
 
 # 1 - For baseline function, using the value from optimise function
 
@@ -306,17 +323,6 @@ View(RPS.ord.data)
 par1 =  0.6039006 
 par2 = 0.6671990
 
-#Get the probability to obtain y=0
-y = RPS.data$WDL_0
-RPS.data$p0 = mapply(function(y,i,j,t) Dav_pdf(y,par2,par1,i,j,t),y=y,i=i,j=j,t=t)
-
-#Get the probability to obtain y=1
-y = RPS.data$WDL_1
-RPS.data$p1 = mapply(function(y,i,j,t) Dav_pdf(y,par2,par1,i,j,t),y=y,i=i,j=j,t=t)
-
-#Get the probability to obtain y=2
-y = RPS.data$WDL_2
-RPS.data$p2 = mapply(function(y,i,j,t) Dav_pdf(y,par2,par1,i,j,t),y=y,i=i,j=j,t=t)
 
 # Get the RPS 
 RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
