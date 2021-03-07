@@ -251,7 +251,7 @@ ptrdata$par2 = NaN
 
 for(i in 1:N) {
   # get the subset 
-  tr_subset = trdata[1:306+i-1,]
+  tr_subset = trdata[1:i+305,]
   
   #get the suited parameters 
   re = optim(par=init,fn=ll_BL,data=tr_subset,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
@@ -302,9 +302,9 @@ ptrdata$par1 = NaN
 ptrdata$par2 = NaN
 ptrdata$par3 = NaN
 
-for(i in 5:N) {
+for(i in 1:N) {
   # get the subset 
-  tr_subset = trdata[1:i-1,]
+  tr_subset = trdata[1:i+305,]
   
   #get the suited parameters 
   re = optim(par=init,fn=ll_BL,data=tr_subset,method_pdf=Ord_pdf,method="BFGS",control=list(fnscale=-1))
