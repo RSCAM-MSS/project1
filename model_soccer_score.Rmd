@@ -7,7 +7,7 @@ output:
 
 ```{r include=FALSE}
 library(tidyverse)
-install.packages("fastDummies")
+# install.packages("fastDummies")
 library("fastDummies")
 ```
 
@@ -242,6 +242,21 @@ optim(par=init,fn=ll_BL,data=trdata,method_pdf=Ord_pdf,method="BFGS",control=lis
 Both functions above return the value 
 
 ```{r}
+N = 2
+init = c(.5,.5)
+ptrdata = trdata
+ptrdata$par1 = NaN
+ptrdata$par2 = NaN
+
+for(i in 6:N) {
+  tr_subset = trdata[1:i-1,]
+  re = optim(par=init,fn=ll_BL,data=tr_subset,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
+  init = re$par
+  ptrdata[i,7] = init[1]
+  ptrdata[i,8] = init[2]
+}
+
+  
 # Build a table similar to what's in the paper
 # a1 = team i loose WDL_0 
 # a2 = team i draw WDL_1
@@ -262,21 +277,26 @@ par3 = 0.6944607
 
 
 #Get the probability to obtain y=0
-y = RPS.data$WDL_0
-RPS.data$p0 = mapply(function(y,i,j,t) Ord_pdf(y,c(par1,par2),par3,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+RPS.data$p0 = mapply(function(i,j,t) Ord_pdf(0,c(par2,par3),par1,i,j,t),i=i,j=j,t=t)
 
 #Get the probability to obtain y=1
-y = RPS.data$WDL_1
-RPS.data$p1 = mapply(function(y,i,j,t) Ord_pdf(y,c(par1,par2),par3,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+RPS.data$p1 = mapply(function(i,j,t) Ord_pdf(1,c(par2,par3),par1,i,j,t),i=i,j=j,t=t)
 
 #Get the probability to obtain y=2
-y = RPS.data$WDL_2
-RPS.data$p2 = mapply(function(y,i,j,t) Ord_pdf(y,c(par1,par2),par3,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+
+RPS.data$p2 = mapply(function(i,j,t) Ord_pdf(2,c(par2,par3),par1,i,j,t),i=i,j=j,t=t)
 
 # Get the RPS 
 RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
 
 #RPS.ord.data= as.data.frame(RPS.data$HT,RPS.data$WDL_0,RPS.data$WDL_1,RPS.data$WDL_2,RPS.data$p0,RPS.data$p1,RPS.data$p2)
+
+RPS.data$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = RPS.data$p0,p1 = RPS.data$p1,p2 = RPS.data$p2)
+
+RPS.data$Accuracy = as.numeric(RPS.data$Outcome == RPS.data$WDL)
+
 RPS.ord.data = RPS.data
 
 View(RPS.ord.data)
@@ -288,18 +308,22 @@ par2 = 0.6671990
 
 #Get the probability to obtain y=0
 y = RPS.data$WDL_0
-RPS.data$p0 = mapply(function(y,i,j,t) Dav_pdf(y,par1,par2,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p0 = mapply(function(y,i,j,t) Dav_pdf(y,par2,par1,i,j,t),y=y,i=i,j=j,t=t)
 
 #Get the probability to obtain y=1
 y = RPS.data$WDL_1
-RPS.data$p1 = mapply(function(y,i,j,t) Dav_pdf(y,par1,par2,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p1 = mapply(function(y,i,j,t) Dav_pdf(y,par2,par1,i,j,t),y=y,i=i,j=j,t=t)
 
 #Get the probability to obtain y=2
 y = RPS.data$WDL_2
-RPS.data$p2 = mapply(function(y,i,j,t) Dav_pdf(y,par1,par2,i,j,t,RPS.data),y=y,i=i,j=j,t=t)
+RPS.data$p2 = mapply(function(y,i,j,t) Dav_pdf(y,par2,par1,i,j,t),y=y,i=i,j=j,t=t)
 
 # Get the RPS 
 RPS.data$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2),p0 = RPS.data$p0,p1 = RPS.data$p1, a0 =RPS.data$WDL_0,a1 = RPS.data$WDL_1)
+
+RPS.data$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = RPS.data$p0,p1 = RPS.data$p1,p2 = RPS.data$p2)
+
+RPS.data$Accuracy = as.numeric(RPS.data$Outcome == RPS.data$WDL)
 
 RPS.data.davidson = RPS.data
 View(RPS.data.davidson)
