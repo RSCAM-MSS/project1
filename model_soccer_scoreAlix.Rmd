@@ -161,6 +161,7 @@ trdata <- data %>% filter((Sea=="15-16" | Sea=="16-17") & Lge=="GER1") %>%
     A = as.integer(AT),
     WDL = 2*(WDL == "W") + (WDL == "D")
 )
+<<<<<<< HEAD
 
 trdata_season <- data %>% filter((Sea=="15-16" | Sea=="16-17") & Lge=="GER2") %>%
   summarise(
@@ -174,6 +175,8 @@ trdata_season <- data %>% filter((Sea=="15-16" | Sea=="16-17") & Lge=="GER2") %>
 
 
 
+=======
+>>>>>>> 1a7fc9f8d2ee414fc78ddc28f711d675ed8a1ee8
 ```
 
 ```{r}
@@ -258,18 +261,26 @@ Both functions above return the value
 
 N = nrow(trdata)
 init = c(.5,.5)
+<<<<<<< HEAD
 
 # Add the data from trdata_season GER1, to compute the parameters. 
 Nseason = nrow(trdata_season)
 tr_data_par = rbind(trdata_season, trdata)
 
 ptrdata = tr_data_par[613:918,]
+=======
+ptrdata = trdata[307:N]
+>>>>>>> 1a7fc9f8d2ee414fc78ddc28f711d675ed8a1ee8
 ptrdata$par1 = NaN
 ptrdata$par2 = NaN
 
 for(i in 1:N) {
   # get the subset 
+<<<<<<< HEAD
   tr_subset = tr_data_par[1:i+613,]
+=======
+  tr_subset = trdata[1:i+305,]
+>>>>>>> 1a7fc9f8d2ee414fc78ddc28f711d675ed8a1ee8
   
   #get the suited parameters 
   re = optim(par=init,fn=ll_BL,data=tr_subset,method_pdf=Dav_pdf,method="BFGS",control=list(fnscale=-1))
@@ -299,6 +310,7 @@ ptrdata<-fastDummies::dummy_cols(ptrdata,select_columns = "WDL",remove_first_dum
 
 # Get the RPS 
 ptrdata$RPS = mapply(function(p0,p1,a0,a1) ((p0-a0)^2 + (p0-a0+p1-a1)^2)/2,p0 = ptrdata$p0,p1 = ptrdata$p1, a0 =ptrdata$WDL_0,a1 = ptrdata$WDL_1)
+<<<<<<< HEAD
 
 # Get the predicted outcome and accuracy
 ptrdata$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = ptrdata$p0,p1 = ptrdata$p1,p2 = ptrdata$p2)
@@ -313,6 +325,22 @@ View(ptrdata.dav)
 # 2 - For Ordinal function, using parameters estimated from previous games
 # TO DO
 
+=======
+
+# Get the predicted outcome and accuracy
+ptrdata$Outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = ptrdata$p0,p1 = ptrdata$p1,p2 = ptrdata$p2)
+
+ptrdata$Accuracy = as.numeric(ptrdata$Outcome == ptrdata$WDL)
+
+# Save the results
+ptrdata.dav = ptrdata
+
+View(ptrdata.dav)
+
+# 2 - For Ordinal function, using parameters estimated from previous games
+# TO DO
+
+>>>>>>> 1a7fc9f8d2ee414fc78ddc28f711d675ed8a1ee8
 N = 6
 init = c(-.5,0,.5)
 ptrdata = trdata
