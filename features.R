@@ -44,13 +44,6 @@ dt = data.frame(
     GoalDfTally = cumsum(GoalDf)-GoalDf
   ) %>% ungroup()
 
-'
-# Check Season window: mostly Aug-May; except for 01-02, it is Jul-May
-View(dt %>% mutate(
-  month = lubridate::month(t)
-) %>% 
-  group_by(Sea) %>% select(Sea,month) %>% distinct() %>% pivot_wider(names_from = Sea, values_from = month, values_fn = list))
-'
 
 ## Data exploration
 
@@ -64,6 +57,12 @@ ger1_0001 = ger1 %>% filter(Sea=="00-01")
 sort(unique(ger1_0001$HT))
 
 # 9 Games per round, 34 rounds in total.
+
+# Check Season window: mostly Aug-May; except for 01-02, it is Jul-May
+View(dt %>% mutate(
+  month = lubridate::month(t)
+) %>% 
+  group_by(Sea) %>% select(Sea,month) %>% distinct() %>% pivot_wider(names_from = Sea, values_from = month, values_fn = list))
 '
 
 ## 2: Newly promoted
