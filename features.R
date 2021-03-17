@@ -10,10 +10,18 @@ data = read.table("data/ISDBv2.0.txt",sep="\t",header=TRUE)
 
 ## Feature extraction
 
-ger1 = data %>% filter(Lge=="GER1") %>% select(-Lge) %>% mutate(Date = as.Date(Date,"%d/%m/%Y"), Quarter = quarter(Date))
+ger1 = data %>% filter(Lge=="GER1") %>% select(-Lge) %>% 
+  mutate(
+    Sea = as.factor(Sea),
+    Date = as.Date(Date,"%d/%m/%Y"), 
+    Quarter = quarter(Date)
+    )
+
+seanames = levels(ger1$Sea)  # save season names
 
 dt = data.frame(
-  Sea = c(ger1$Sea, ger1$Sea),
+  Sea = as.integer(c(ger1$Sea, ger1$Sea)), # change season names to 1,2,...,17,
+                                           # so that it is easier to merge the previous season/round data
   t = c(ger1$Date, ger1$Date),
   Quarter = c(ger1$Quarter, ger1$Quarter),
   attack = as.factor(c(ger1$HT, ger1$AT)),
@@ -21,14 +29,16 @@ dt = data.frame(
   Home = c(rep(1,nrow(ger1)),rep(0,nrow(ger1))),
   Goals = c(ger1$HS, ger1$AS),
   GoalsConceded = c(ger1$AS, ger1$HS),
-  GoalDf = c(ger1$GD, -ger1$GD),
-  Points = 3*(GoalDf > 0) + 1*(GoalDf == 0)
+  GoalDf = c(ger1$GD, -ger1$GD)
+  ) %>% 
+  mutate(
+    Points = 3*(GoalDf > 0) + 1*(GoalDf == 0)
   ) %>% arrange(t) %>% 
   group_by(Sea,attack) %>%
   mutate(
     DaysSincePrevMa = t - lag(t),
     MatchesPlayed = cumsum(attack==attack)-1,
-    Round = MatchesPlayed %/% 9 + 1,
+    Round = MatchesPlayed + 1,
     PointsTally = cumsum(Points)-Points,
     Form = rollsumr(Points,k=3,fill=NA)/9,
     GoalDfTally = cumsum(GoalDf)-GoalDf
@@ -58,30 +68,63 @@ sort(unique(ger1_0001$HT))
 
 ## 2: Newly promoted
 
-teamlist = ger1 %>% select(Sea, HT) %>% distinct() %>% pivot_wider(names_from = "Sea", values_from = "HT", values_fn = list)
 
-ger1$Np = 0
+teamlist = dt %>% distinct(Sea, attack) %>% group_by(Sea) %>% summarise(Sea,Teams = list(attack),.groups="drop") %>%
+  distinct()
 
-## 11,12
+allteams = unique(ger1$HT)
+
+newly = data.frame( t( apply( teamlist[2], 1, function(x) as.numeric( allteams %in% x[[1]]) ) ) ) %>% 
+  rollapplyr(2,function(x) as.numeric(x[1]==0 & x[2]==1),fill=NA)
+colnames(newly) = allteams
+newly = cbind(teamlist["Sea"],newly)
+newly = newly %>% pivot_longer(-Sea,names_to="attack",values_to="NewlyPromoted")
+
+dt = left_join(dt,newly,by = c("Sea","attack"))
+
+
+
+## 11,12: Previous season/round points tally/goal difference
+
+levels(dt$Sea) = c(1:17)
 
 seasonsummary = dt %>% group_by(Sea,attack) %>%  summarise(
-  SeasonPoints = sum(Points),
-  SeasonGD = sum(GoalDf)
-  ) %>% arrange(Sea,desc(SeasonPoints)) %>% 
+  PrevSeasonPoints = sum(Points),
+  PrevSeasonGD = sum(GoalDf)
+  ) %>% arrange(Sea,desc(PrevSeasonPoints)) %>% 
   mutate(
-    Rankings = order(SeasonPoints, decreasing = T)
+    Sea = Sea + 1,
+    PrevSeasonRankings = order(PrevSeasonPoints, decreasing = T)
+  ) %>% ungroup() %>%  filter(Sea < 18)
+
+roundsummary = dt %>% group_by(Sea,Round,attack) %>% summarise(
+  PrevRoundPoints = sum(Points),
+  PrevRoundGD = sum(GoalDf),
+  .groups = "drop"
+  ) %>% 
+  group_by(Sea,attack) %>% 
+  mutate(
+    Round = Round + 1,
+    PrevRoundPointsTally = cumsum(PrevRoundPoints),
+    PrevRoundGDT = cumsum(PrevRoundGD)
+  ) %>% ungroup() %>% 
+  arrange(Sea,Round,desc(PrevRoundPointsTally)) %>%
+  group_by(Sea,Round) %>% 
+  mutate(
+    PrevRoundRankings = order(PrevRoundPointsTally, decreasing = T)
+  ) %>% ungroup() %>% 
+  filter(Round < 35)
+
+dt = dt %>% left_join(seasonsummary,by=c("Sea","attack")) %>%
+  left_join(roundsummary,by=c("Sea","Round","attack")) %>% 
+  mutate(
+    Sea = ordered(Sea)
   )
 
-roundsummary = dt %>% group_by(Sea,Round,attack) %>%  summarise(
-  RoundPoints = sum(Points),
-  RoundGD = sum(GoalDf)
-) %>% arrange(Sea,Round,desc(RoundPoints)) %>% 
-  mutate(
-    Rankings = order(RoundPoints, decreasing = T)
-  )
+levels(dt$Sea) = seanames # change the season names back
 
 
-## Check data forn one team
+## Check data for one team
 
 View(dt %>% filter(attack=="Dortmund"))
 
