@@ -6,19 +6,20 @@
 ## Features: Home, Points tally, Goal Difference
 
 ## Home
-lit <- function(beta,i,t, ma) {
-  xit1 <- as.numeric(ma$H == i)
+lit <- function(beta,i,t, ma,features_list) {
+ # xit1 <- as.numeric(ma$Home == i)
   
-  if(xit1 == 1) {
-    xit2 <- ma$HPT
-    xit3 <- ma$HGD
-  } else {
-    xit2 <- ma$APT
-    xit3 <- ma$AGD
-  }
+  # previous code 
+  # if(xit1 == 1) {
+  #   xit2 <- ma$HPT
+  #   xit3 <- ma$HGD
+  # } else {
+  #   xit2 <- ma$APT
+  #   xit3 <- ma$AGD
+  # }
   
-  xit <- c(xit1,xit2,xit3)
-  
+  #get a matrix of features
+  features_dt <- as.matrix(dt[features_list])
   return(beta %*% xit)
 }
 
@@ -31,9 +32,9 @@ ll_LF <- function(theta,data,method_pdf) {
   
   for (k in 1:N) {
     ma = data[k,]
-    i = ma$H
-    j = ma$A
-    t = ma$Date
+    i = ma$Home
+    j = ma$Away
+    t = ma$t
     y = ma$WDL
     
     ll = ll + log10(method_pdf(y,delta,beta,i,j,t,ma))

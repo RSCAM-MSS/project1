@@ -5,42 +5,12 @@ library(tidyverse)
 
 
 ## read the data
-data <- read.table("data/ISDBv2.0.txt",sep="\t",header=TRUE)
+#data <- read.table("data/ISDBv2.0.txt",sep="\t",header=TRUE)
+# data_soccer <- load("~/GitHub/project1/data_output/dt_features.Rdata")
+# Use the dataset produced by features.R
 
-## feature extraction on a small subset
-newdata <- data %>% filter(Lge=="GER1", Sea=="16-17") %>% 
-  mutate(
-    id = row_number(),
-    .before = Sea
-  ) %>% 
-  pivot_longer(
-    cols = c("HT","AT"),
-    names_to = "Home",
-    values_to = "Team"
-  ) %>% 
-  mutate(
-    Points = 3*(WDL == "W")*(Home == "HT") + 3*(WDL == "L")*(Home == "AT") + (WDL == "D")
-  ) %>% 
-  group_by(Sea,Lge,Team) %>%
-  mutate(
-    PT = cumsum(Points)-Points, ## get points tally
-    GD = cumsum(GD*(Home == "HT")) - GD*(Home == "HT"),
-    SeasonGD = sum(GD*(Home == "HT"))
-  ) %>% ungroup() %>%
-  select(-Points) %>% 
-  pivot_wider(names_from = Home,values_from = c(Team,PT,GD,SeasonGD)) %>% 
-  summarise(
-    id, Sea, Lge, Date,
-    HT = ordered(Team_HT,levels = unique(.data$Team_HT)),
-    AT = ordered(Team_AT,levels = unique(.data$Team_HT)),
-    H = as.integer(HT),
-    A = as.integer(AT),
-    HPT = PT_HT, APT = PT_AT, HGD = GD_HT, AGD = GD_AT,
-    HSGD = SeasonGD_HT, ASGD = SeasonGD_AT,
-    WDL = 2*(WDL == "W") + (WDL == "D")
-  )
-
-
+View(dt)
+newdata = dt
 ## test
 source("models/prop.R")
 

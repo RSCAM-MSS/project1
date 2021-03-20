@@ -3,8 +3,8 @@
 ## 1. Ordinal
 
 Ord_cdf <- function(y,delta,beta,i,j,t,ma) {
-  l_it <- lit(beta,i,t,ma)
-  l_jt <- lit(beta,j,t,ma)
+  l_it <- lit(beta,i,t,ma,features_list)
+  l_jt <- lit(beta,j,t,ma,features_list)
   num = exp(delta[y+1]+l_it)
   denom = num + exp(l_jt)
   return(num/denom)
