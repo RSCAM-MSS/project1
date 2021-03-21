@@ -77,8 +77,7 @@ dt = data.frame(
 
 # Now we can prep dataset easily for any league 
 
-dt = dataset_prep(GER2)
-#dt = dataset_prep("ENG2")
+dt = dataset_prep("GER2")
 
 #seanames = levels(ger1$Sea)  # save season names
 
@@ -139,6 +138,8 @@ newly_promoted<-data.frame(Sea, attack,newly_prom = rep(1,length(Sea)))
 ## Add the information for the attack team
 # !@ not sure it makes sense
 dtnew <- merge(dt, newly_promoted, by.x = c("Sea","attack_names"), by.y = c("Sea","attack"),all.x=TRUE)
+
+#!@
 dtnew <- merge(dt, newly_promoted, by.x = c("Sea","defense_names"), by.y = c("Sea","attack"),all.x=TRUE)
 dtnew = dtnew %>% mutate(newly_prom = replace_na(newly_prom, 0))
 

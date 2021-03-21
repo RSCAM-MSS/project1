@@ -19,7 +19,7 @@ lit <- function(beta,i,t, ma,features_list) {
   # }
   
   #get a matrix of features
-  features_dt <- as.matrix(dt[features_list])
+  features_dt <- as.matrix(ma[features_list])
   return(beta %*% xit)
 }
 
