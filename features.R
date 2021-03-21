@@ -11,7 +11,7 @@ dataset_prep<-function(league_int){
   league_d = data_soccer %>% filter(Lge==league_int) %>% select(-Lge) %>% 
     mutate(
       #Get the season
-      Sea = as.factor(Sea),
+      Sea = Sea,
       #get the date in a readable format
       Date = as.Date(Date,"%d/%m/%Y"), 
       #add the quarters of years 
@@ -24,8 +24,7 @@ dataset_prep<-function(league_int){
     )
   
 dt = data.frame(
-    Sea = as.integer(c(league_d$Sea, league_d$Sea)), # change season names to 1,2,...,17,
-                                             # so that it is easier to merge the previous season/round data
+    Sea = as.factor(c(league_d$Sea,league_d$Sea)),
     WDL = c(league_d$WDL_home,league_d$WDL_attack),
     # Date of the game
     t = as.Date(c(league_d$Date, league_d$Date)),
@@ -100,48 +99,60 @@ View(dt %>% mutate(
 ) %>% 
   group_by(Sea) %>% select(Sea,month) %>% distinct() %>% pivot_wider(names_from = Sea, values_from = month, values_fn = list))
 '
+seanames = levels(dt$Sea)
+
+dt = dt %>% mutate(
+  Sea = as.integer(Sea) # change season names to 1,2,...,17,
+                                                  # so that it is easier to merge the previous season/round data
+)
 
 ## 2: Newly promoted/First game of the league in this season
 ## ------------------
 # The block below is not very efficient code - could do better, but it works for now
 teamlist = dt %>% distinct(Sea, attack) %>% group_by(Sea) %>% summarise(Sea,Teams = attack,.groups="drop") %>%
   distinct()
-teamlist2 = dcast(teamlist,Sea~Teams)
+teamlist2 = dcast(teamlist,Sea~Teams,value.var="Sea",fill=0)  #! Add value.var="Sea" instead of using the for loop below
 teamlist_league = colnames(teamlist2)[-1]
 last_sea = max(teamlist$Sea)
+last_rou = max(dt$Round)
 sort_val<-function(col){
   if (is.na(col)){r = 0}
   else {r=1}
   return(r)
 }
-Sea = c()
-attack = c()
+# Sea = c()
+# attack = c()
 
-for (y in teamlist_league){
-  for (x in 1:last_sea){
-    v = teamlist2[x,y]
-    if (is.na(v)){r = NA}
-    else {r=x}
-    teamlist2[x,y] = r
-  }
-  min_season = min(teamlist2[,y],na.rm=TRUE)
-  if (min_season!=1){
-    Sea<-c(Sea,min_season)
-    attack<-c(attack,y)
-  }
-}
-newly_promoted<-data.frame(Sea, attack,newly_prom = rep(1,length(Sea)))
+teamlist2[,-1] = teamlist2[,-1] %>% rollapplyr(2,function(x) (x[1]==0)*(x[2]!=0), fill=0)
+newly_promoted = teamlist2 %>% pivot_longer(-Sea,names_to="attack_names",values_to="NewlyPromoted")
+
+# for (y in teamlist_league){
+#   # for (x in 1:last_sea){
+#   #   v = teamlist2[x,y]
+#   #   if (is.na(v)){r = NA}
+#   #   else {r=x}
+#   #   teamlist2[x,y] = r
+#   # }
+#   # min_season = min(teamlist2[,y],na.rm=TRUE)
+#   # if (min_season!=1){
+#   #   Sea<-c(Sea,min_season)
+#   #   attack<-c(attack,y)
+#   # }
+# }
+# 
+# newly_promoted<-data.frame(Sea, attack,newly_prom = rep(1,length(Sea)))
 
 ## ------------------------
 
 
 ## Add the information for the attack team
 # !@ not sure it makes sense
-dtnew <- merge(dt, newly_promoted, by.x = c("Sea","attack_names"), by.y = c("Sea","attack"),all.x=TRUE)
+# dtnew <- merge(dt, newly_promoted, by.x = c("Sea","attack_names"), by.y = c("Sea","attack"),all.x=TRUE)
+dtnew <- left_join(dt, newly_promoted, by = c("Sea","attack_names"),all.x=TRUE)
 
 #!@
-dtnew <- merge(dt, newly_promoted, by.x = c("Sea","defense_names"), by.y = c("Sea","attack"),all.x=TRUE)
-dtnew = dtnew %>% mutate(newly_prom = replace_na(newly_prom, 0))
+# dtnew <- merge(dt, newly_promoted, by.x = c("Sea","defense_names"), by.y = c("Sea","attack"),all.x=TRUE)
+# dtnew = dtnew %>% mutate(newly_prom = replace_na(newly_prom, 0))
 
 dt = dtnew
 
@@ -167,7 +178,7 @@ seasonsummary = dt %>% group_by(Sea,attack) %>%  summarise(
   mutate(
     Sea = Sea + 1,
     PrevSeasonRankings = order(PrevSeasonPoints, decreasing = T)
-  ) %>% ungroup() %>%  filter(Sea < 18)
+  ) %>% ungroup() %>%  filter(Sea < last_sea+1)  #! save data of known seasons
 
 roundsummary = dt %>% group_by(Sea,Round,attack) %>% summarise(
   PrevRoundPoints = sum(Points),
@@ -185,7 +196,7 @@ roundsummary = dt %>% group_by(Sea,Round,attack) %>% summarise(
   mutate(
     PrevRoundRankings = order(PrevRoundPointsTally, decreasing = T)
   ) %>% ungroup() %>% 
-  filter(Round < 35)
+  filter(Round < last_rou+1)
 
 dt = dt %>% left_join(seasonsummary,by=c("Sea","attack")) %>%
   left_join(roundsummary,by=c("Sea","Round","attack")) %>% 
@@ -195,7 +206,7 @@ dt = dt %>% left_join(seasonsummary,by=c("Sea","attack")) %>%
 
 #!@ did not know why important below 
 
-#levels(dt$Sea) = seanames # change the season names back
+levels(dt$Sea) = seanames # change the season names back
 
 
 ## Check data for one team
@@ -204,7 +215,7 @@ dt = dt %>% left_join(seasonsummary,by=c("Sea","attack")) %>%
 
 
 ## Save data with features 
-save(dt, file = "~/GitHub/project1/data_output/dt_features.Rdata")
+save(dt, file = "../project1/data_output/dt_features.Rdata")
 
 
 
