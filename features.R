@@ -10,6 +10,8 @@ dataset_prep<-function(league_int){
   
   league_d = data_soccer %>% filter(Lge==league_int) %>% select(-Lge) %>% 
     mutate(
+      # Give each game a unique index
+      id = c(1:nrow(.)),
       #Get the season
       Sea = Sea,
       #get the date in a readable format
@@ -24,6 +26,7 @@ dataset_prep<-function(league_int){
     )
   
 dt = data.frame(
+    id = as.factor(c(league_d$id,league_d$id)),
     Sea = as.factor(c(league_d$Sea,league_d$Sea)),
     WDL = c(league_d$WDL_home,league_d$WDL_attack),
     # Date of the game
@@ -76,7 +79,7 @@ dt = data.frame(
 
 # Now we can prep dataset easily for any league 
 
-dt = dataset_prep("GER2")
+dt = dataset_prep("GER2") %>% arrange(id)
 
 #seanames = levels(ger1$Sea)  # save season names
 
