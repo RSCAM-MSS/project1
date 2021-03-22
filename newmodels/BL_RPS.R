@@ -8,23 +8,20 @@ RPS_fun<-function(p0,p1,a0,a1){
 # Get the estimated parameters
 trdata = dt %>% filter(Sea %in% c("02-03")) # get the training data
 idlist = unique(trdata$id)
-ngame = nrow(trdata)
-nteam = length(unique(dt$attack)) #  %>% filter(Home==1))
-team_list = unique(dt$attack)
+
 init = c(.5,.5,.6)
-l_init = length(init)
-# init davidson 
-# init = c(c(.5))
+init = c(.5,.5)
 
 out = matrix(ncol=length(init),nrow=length(idlist))
 flag = 1
 
 for(i in idlist) {
   trsubset = dt %>% filter(id<i)
-  re = optim(par=init,fn=ll_BL,data=trsubset,method_prob=Ord_prob,method="BFGS",control=list(fnscale=-1))
+  # re = optim(par=init,fn=ll_BL,data=trsubset,method_prob=Ord_prob,method="BFGS",control=list(fnscale=-1))
+  # init optim for Dav
+  re = optim(par=init,fn=ll_BL,data=trsubset,method_prob=Dav_prob,method="BFGS",control=list(fnscale=-1))
   init = re$par
   out[flag,] = init
-  # out[flag,-c(1:l_init)] = init[-c(1:l_init)]
   flag = flag+1
 }
 
@@ -40,7 +37,32 @@ p2 = Ord_prob(2,pred[c("X2","X3")],lit,ljt)
 a0 = as.numeric(trdata$WDL == 0)
 a1 = as.numeric(trdata$WDL == 1)
 
-rps = RPS_fun(p0,p1,a0,a1)
-mean(rps[!is.na(rps)])  # 0.2262799
-# mean(rps,na.rm = TRUE) #@ doesn't work somehow
+p0 = Dav_prob(0,pred[c("X2")],lit,ljt)
+p1 = Dav_prob(1,pred[c("X2")],lit,ljt)
+p2 = Dav_prob(2,pred[c("X2")],lit,ljt)
+a0 = as.numeric(trdata$WDL == 0)
+a1 = as.numeric(trdata$WDL == 1)
 
+rps = RPS_fun(p0,p1,a0,a1)
+mean(rps$X3,na.rm = TRUE)
+sd(rps$X3,na.rm=TRUE)/sqrt(length(a0))
+
+rps = RPS_fun(p0,p1,a0,a1)
+mean(rps$X2,na.rm = TRUE)
+sd(rps$X2,na.rm=TRUE)/sqrt(length(a0))
+
+# Ord: 0.2262799 (0.003808165)
+# Dav: 0.2262788 (0.003808268)
+
+outcomes = mapply(function(p0,p1,p2) which.max(c(p0,p1,p2))-1, p0=p0$X3,p1=p1$X3,p2=p2$X3)
+accuracy = 1*(outcomes == pred$WDL)
+mean(accuracy)
+sd(accuracy,na.rm = TRUE)/sqrt(length(outcomes))
+
+outcomes = mapply(function(p0,p1,p2) which.max(c(p0,p1,p2))-1, p0=p0$X2,p1=p1$X2,p2=p2$X2)
+accuracy = 1*(outcomes == pred$WDL)
+mean(accuracy)
+sd(accuracy,na.rm = TRUE)/sqrt(length(a0))
+
+# Ord: 0.4477124 (0.02011693)
+# Dav: 0.4477124 (0.02011693)

@@ -15,5 +15,5 @@ ll_BL = function(par,data,method_prob) {
 
 
 # test on optim
-optim(par=c(0.5,0.5),fn=ll_BL,data=dt,method_prob=Dav_prob,method="BFGS",control=list(fnscale=-1))
-optim(par=c(-0.1,-0.1,1.),fn=ll_BL,data=dt,method_prob=Ord_prob,method="BFGS",control=list(fnscale=-1))
+# optim(par=c(0.5,0.5),fn=ll_BL,data=dt,method_prob=Dav_prob,method="BFGS",control=list(fnscale=-1))
+# optim(par=c(-0.1,-0.1,1.),fn=ll_BL,data=dt,method_prob=Ord_prob,method="BFGS",control=list(fnscale=-1))
