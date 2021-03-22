@@ -1,6 +1,7 @@
 ## Read the data
 # data_soccer = read.table("data_input/ISDBv2.0.txt",sep="\t",header=TRUE) 
-# AL download data setwd("~/GitHub/project1")
+# AL download data 
+#setwd("~/GitHub/project1")
 data_soccer <- read.delim("data_input/ISDBv2.0.txt")
 
 ## Feature extraction
