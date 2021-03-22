@@ -26,7 +26,7 @@ dataset_prep<-function(league_int){
     )
   
 dt = data.frame(
-    id = as.factor(c(league_d$id,league_d$id)),
+    id = c(league_d$id,league_d$id),
     Sea = as.factor(c(league_d$Sea,league_d$Sea)),
     WDL = c(league_d$WDL_home,league_d$WDL_attack),
     # Date of the game
