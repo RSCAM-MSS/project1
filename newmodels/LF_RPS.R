@@ -34,16 +34,16 @@ ljt = rep(0,ngame)
 ljt[seq(1,ngame,by=2)] = lit[seq(2,ngame,by=2)]
 ljt[seq(2,ngame,by=2)] = lit[seq(1,ngame,by=2)]
 
-pred$p0 = Ord_prob(0,pred[c("X6","X7")],lit,ljt)
-pred$p1 = Ord_prob(1,pred[c("X6","X7")],lit,ljt)
-pred$p2 = Ord_prob(2,pred[c("X6","X7")],lit,ljt)
+p0 = Ord_prob(0,pred[c("X6","X7")],lit,ljt)
+p1 = Ord_prob(1,pred[c("X6","X7")],lit,ljt)
+p2 = Ord_prob(2,pred[c("X6","X7")],lit,ljt)
 a0 = as.numeric(trdata$WDL == 0)
 a1 = as.numeric(trdata$WDL == 1)
 
-rps = RPS_fun(pred$p0,pred$p1,a0,a1)
-mean(rps[!is.na(rps)])
+rps = RPS_fun(p0,p1,a0,a1)
+mean(rps[!is.na(rps)]) # .2309812
 # mean(rps,na.rm = TRUE) #@ doesn't work somehow
 
-outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = p0,p1 = p1,p2 = p2)
+# outcome = mapply(function(p0,p1,p2) (which.max(c(p0,p1,p2))-1),p0 = p0,p1 = p1,p2 = p2)
 
 

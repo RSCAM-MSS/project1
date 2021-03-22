@@ -18,7 +18,6 @@ ll_CS = function(par,data,team_list,method_prob) {
   return(ll)
 }
 
-team_list = unique(dt$attack)
-ll_CS(c(rep(0,length(team_list)),.5,.5,.6),dt,team_list,Ord_prob)
-
-optim(par=c(rep(0,length(team_list)),.5,.5,.6),ll_CS,data=dt,team_list=team_list,method_prob = Ord_prob,method="BFGS",control=list(fnscale=-1) )
+# team_list = unique(dt$attack)
+# ll_CS(c(rep(0,length(team_list)),.5,.5,.6),dt,team_list,Ord_prob)
+# optim(par=c(rep(0,length(team_list)),.5,.5,.6),ll_CS,data=dt,team_list=team_list,method_prob = Ord_prob,method="BFGS",control=list(fnscale=-1) )
